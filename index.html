@@ -456,6 +456,101 @@
       text-decoration: none;
     }
 
+    /* ADVANCED FILTERS */
+    .advanced-filters {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+    .af-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .af-title { font-size: 0.9rem; font-weight: 500; color: var(--text); }
+    .af-reset {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px;
+      padding: 5px 12px; font-size: 0.78rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .af-reset:hover { border-color: var(--accent); color: var(--accent); }
+    .af-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .af-group { display: flex; flex-direction: column; gap: 10px; }
+    .af-label { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+
+    /* Range slider */
+    .range-wrap { display: flex; flex-direction: column; gap: 6px; }
+    .range-values {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; color: var(--accent); font-weight: 500;
+    }
+    .dual-range { position: relative; height: 28px; }
+    .dual-range input[type=range] {
+      position: absolute; width: 100%; height: 4px;
+      background: none; outline: none; pointer-events: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .dual-range input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px;
+      background: var(--accent); border-radius: 50%;
+      cursor: pointer; pointer-events: all;
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .range-track {
+      position: absolute; top: 12px; left: 0; right: 0;
+      height: 4px; background: var(--border); border-radius: 2px;
+    }
+    .range-fill {
+      position: absolute; height: 100%;
+      background: var(--accent); border-radius: 2px;
+    }
+
+    /* Star filter buttons */
+    .star-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+    .star-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px;
+      padding: 5px 12px; font-size: 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .star-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .star-btn.active {
+      background: rgba(232,197,71,0.15);
+      border-color: var(--accent); color: var(--accent);
+    }
+
+    /* Toggle group */
+    .toggle-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .toggle-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px;
+      padding: 5px 12px; font-size: 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .toggle-btn.active {
+      background: rgba(232,197,71,0.15);
+      border-color: var(--accent); color: var(--accent);
+    }
+
+    /* Results count */
+    .af-results {
+      margin-top: 16px; padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem; color: var(--muted);
+    }
+    #results-count span { color: var(--accent); font-weight: 600; }
+
     /* SCROLL ANIMATION */
     .fade-up {
       opacity: 0;
@@ -534,13 +629,116 @@
     <a href="#" class="see-all">Ver todos →</a>
   </div>
 
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterCards(this,'all')">Todos</button>
-    <button class="filter-btn" onclick="filterCards(this,'norte')">Norte</button>
-    <button class="filter-btn" onclick="filterCards(this,'sur')">Sur</button>
-    <button class="filter-btn" onclick="filterCards(this,'centro')">Centro</button>
-    <button class="filter-btn" onclick="filterCards(this,'occidente')">Occidente</button>
-    <button class="filter-btn" onclick="filterCards(this,'oriente')">Oriente</button>
+  <!-- ZONA TABS -->
+  <div class="filter-bar" id="zone-tabs">
+    <button class="filter-btn active" onclick="setZone(this,'all')">Todos</button>
+    <button class="filter-btn" onclick="setZone(this,'norte')">Norte</button>
+    <button class="filter-btn" onclick="setZone(this,'sur')">Sur</button>
+    <button class="filter-btn" onclick="setZone(this,'centro')">Centro</button>
+    <button class="filter-btn" onclick="setZone(this,'occidente')">Occidente</button>
+    <button class="filter-btn" onclick="setZone(this,'oriente')">Oriente</button>
+  </div>
+
+  <!-- PANEL FILTROS AVANZADOS -->
+  <div class="advanced-filters" id="advanced-filters">
+    <div class="af-header">
+      <span class="af-title">🎛️ Filtros avanzados</span>
+      <button class="af-reset" onclick="resetFilters()">Limpiar filtros</button>
+    </div>
+    <div class="af-grid">
+
+      <!-- Precio arriendo -->
+      <div class="af-group">
+        <label class="af-label">💰 Precio arriendo mensual</label>
+        <div class="range-wrap">
+          <div class="range-values">
+            <span id="price-min-val">$500k</span>
+            <span id="price-max-val">$5M+</span>
+          </div>
+          <div class="dual-range">
+            <input type="range" id="price-min" min="500" max="5000" value="500" step="100" oninput="updateRange()">
+            <input type="range" id="price-max" min="500" max="5000" value="5000" step="100" oninput="updateRange()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seguridad -->
+      <div class="af-group">
+        <label class="af-label">🛡️ Seguridad mínima</label>
+        <div class="star-filter" id="filter-seguridad" data-key="seguridad">
+          <button class="star-btn" onclick="setStarFilter('seguridad',1)">1+</button>
+          <button class="star-btn" onclick="setStarFilter('seguridad',2)">2+</button>
+          <button class="star-btn" onclick="setStarFilter('seguridad',3)">3+</button>
+          <button class="star-btn" onclick="setStarFilter('seguridad',4)">4+</button>
+          <button class="star-btn active" onclick="setStarFilter('seguridad',0)">Todas</button>
+        </div>
+      </div>
+
+      <!-- Transporte -->
+      <div class="af-group">
+        <label class="af-label">🚌 Transporte público</label>
+        <div class="star-filter" id="filter-transporte" data-key="transporte">
+          <button class="star-btn" onclick="setStarFilter('transporte',1)">1+</button>
+          <button class="star-btn" onclick="setStarFilter('transporte',2)">2+</button>
+          <button class="star-btn" onclick="setStarFilter('transporte',3)">3+</button>
+          <button class="star-btn" onclick="setStarFilter('transporte',4)">4+</button>
+          <button class="star-btn active" onclick="setStarFilter('transporte',0)">Todas</button>
+        </div>
+      </div>
+
+      <!-- Colegios -->
+      <div class="af-group">
+        <label class="af-label">🎓 Colegios y universidades</label>
+        <div class="star-filter" id="filter-colegios" data-key="colegios">
+          <button class="star-btn" onclick="setStarFilter('colegios',1)">1+</button>
+          <button class="star-btn" onclick="setStarFilter('colegios',2)">2+</button>
+          <button class="star-btn" onclick="setStarFilter('colegios',3)">3+</button>
+          <button class="star-btn" onclick="setStarFilter('colegios',4)">4+</button>
+          <button class="star-btn active" onclick="setStarFilter('colegios',0)">Todas</button>
+        </div>
+      </div>
+
+      <!-- Hospitales -->
+      <div class="af-group">
+        <label class="af-label">🏥 Hospitales y salud</label>
+        <div class="star-filter" id="filter-hospitales" data-key="hospitales">
+          <button class="star-btn" onclick="setStarFilter('hospitales',1)">1+</button>
+          <button class="star-btn" onclick="setStarFilter('hospitales',2)">2+</button>
+          <button class="star-btn" onclick="setStarFilter('hospitales',3)">3+</button>
+          <button class="star-btn" onclick="setStarFilter('hospitales',4)">4+</button>
+          <button class="star-btn active" onclick="setStarFilter('hospitales',0)">Todas</button>
+        </div>
+      </div>
+
+      <!-- Vida de barrio -->
+      <div class="af-group">
+        <label class="af-label">🎭 Vida de barrio</label>
+        <div class="star-filter" id="filter-vida" data-key="vida">
+          <button class="star-btn" onclick="setStarFilter('vida',1)">1+</button>
+          <button class="star-btn" onclick="setStarFilter('vida',2)">2+</button>
+          <button class="star-btn" onclick="setStarFilter('vida',3)">3+</button>
+          <button class="star-btn" onclick="setStarFilter('vida',4)">4+</button>
+          <button class="star-btn active" onclick="setStarFilter('vida',0)">Todas</button>
+        </div>
+      </div>
+
+      <!-- Inclinación terreno -->
+      <div class="af-group">
+        <label class="af-label">⛰️ Inclinación del terreno</label>
+        <div class="toggle-group" id="filter-terreno">
+          <button class="toggle-btn active" onclick="setTerrain(this,'all')">Todos</button>
+          <button class="toggle-btn" onclick="setTerrain(this,'plano')">🟢 Plano</button>
+          <button class="toggle-btn" onclick="setTerrain(this,'moderado')">🟡 Moderado</button>
+          <button class="toggle-btn" onclick="setTerrain(this,'empinado')">🔴 Empinado</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RESULTADOS COUNT -->
+    <div class="af-results">
+      <span id="results-count">6 barrios encontrados</span>
+    </div>
   </div>
 
   <div class="cards-grid" id="cards-grid"></div>
@@ -626,13 +824,48 @@
 document.addEventListener('DOMContentLoaded', function() {
 // ─── DATA ───────────────────────────────────────────────────────────────────
 const BARRIOS = [
-  { name:"El Poblado", commune:"Comuna 14", zone:"sur", adminScore:4.4, userScore:4.2, tags:["Gastronómico","Turístico","Nightlife"], reviews:312, color:"#4caf82" },
-  { name:"Laureles", commune:"Comuna 11", zone:"occidente", adminScore:4.1, userScore:4.3, tags:["Familiar","Tranquilo","Comercial"], reviews:198, color:"#4caf82" },
-  { name:"Envigado Centro", commune:"Municipio Envigado", zone:"sur", adminScore:3.9, userScore:4.5, tags:["Seguro","Parques","Cafés"], reviews:145, color:"#4caf82" },
-  { name:"Aranjuez", commune:"Comuna 4", zone:"norte", adminScore:3.2, userScore:3.4, tags:["Histórico","Mercados","Comunidad"], reviews:87, color:"#e8c547" },
-  { name:"Belén", commune:"Comuna 16", zone:"sur", adminScore:3.8, userScore:3.6, tags:["Residencial","Colegios","Parques"], reviews:124, color:"#e8c547" },
-  { name:"Manrique", commune:"Comuna 3", zone:"norte", adminScore:2.8, userScore:3.1, tags:["Popular","Arte urbano","Escaleras"], reviews:63, color:"#e8c547" },
+  { name:"El Poblado", commune:"Comuna 14", zone:"sur",
+    adminScore:4.4, userScore:4.2, tags:["Gastronómico","Turístico","Nightlife"],
+    reviews:312, color:"#4caf82",
+    seguridad:4.2, transporte:3.7, colegios:4.1, hospitales:4.3, vida:4.8,
+    precioMin:2500, precioMax:8000, terreno:"plano" },
+  { name:"Laureles", commune:"Comuna 11", zone:"occidente",
+    adminScore:4.1, userScore:4.3, tags:["Familiar","Tranquilo","Comercial"],
+    reviews:198, color:"#4caf82",
+    seguridad:4.3, transporte:4.1, colegios:4.5, hospitales:4.0, vida:4.2,
+    precioMin:1800, precioMax:5000, terreno:"plano" },
+  { name:"Envigado Centro", commune:"Municipio Envigado", zone:"sur",
+    adminScore:3.9, userScore:4.5, tags:["Seguro","Parques","Cafés"],
+    reviews:145, color:"#4caf82",
+    seguridad:4.6, transporte:3.8, colegios:4.3, hospitales:4.4, vida:4.0,
+    precioMin:1500, precioMax:4500, terreno:"plano" },
+  { name:"Aranjuez", commune:"Comuna 4", zone:"norte",
+    adminScore:3.2, userScore:3.4, tags:["Histórico","Mercados","Comunidad"],
+    reviews:87, color:"#e8c547",
+    seguridad:2.8, transporte:3.9, colegios:3.2, hospitales:3.0, vida:3.6,
+    precioMin:700, precioMax:1800, terreno:"moderado" },
+  { name:"Belén", commune:"Comuna 16", zone:"sur",
+    adminScore:3.8, userScore:3.6, tags:["Residencial","Colegios","Parques"],
+    reviews:124, color:"#e8c547",
+    seguridad:3.5, transporte:3.8, colegios:4.2, hospitales:3.6, vida:3.4,
+    precioMin:900, precioMax:2500, terreno:"moderado" },
+  { name:"Manrique", commune:"Comuna 3", zone:"norte",
+    adminScore:2.8, userScore:3.1, tags:["Popular","Arte urbano","Escaleras"],
+    reviews:63, color:"#e8c547",
+    seguridad:2.5, transporte:3.5, colegios:2.9, hospitales:2.8, vida:3.2,
+    precioMin:500, precioMax:1400, terreno:"empinado" },
+  { name:"Robledo", commune:"Comuna 7", zone:"occidente",
+    adminScore:3.4, userScore:3.7, tags:["Universitario","Verde","Tranquilo"],
+    reviews:98, color:"#e8c547",
+    seguridad:3.3, transporte:3.6, colegios:4.0, hospitales:3.2, vida:3.5,
+    precioMin:800, precioMax:2000, terreno:"empinado" },
+  { name:"La América", commune:"Comuna 12", zone:"occidente",
+    adminScore:3.7, userScore:3.9, tags:["Comercial","Central","Activo"],
+    reviews:112, color:"#e8c547",
+    seguridad:3.6, transporte:4.3, colegios:3.8, hospitales:3.9, vida:4.0,
+    precioMin:1000, precioMax:2800, terreno:"plano" },
 ];
+
 
 const NEIGHBORHOODS_MOCK = [
   { name:"El Poblado", lat:6.2087, lng:-75.5671, score:4.3 },
@@ -766,14 +999,49 @@ fetch(GEOMEDELLIN_URL)
     });
   });
 
-// ─── CARDS ──────────────────────────────────────────────────────────────────
-function renderCards(filter) {
+// ─── FILTER STATE ────────────────────────────────────────────────────────────
+const filterState = {
+  zone: 'all',
+  seguridad: 0,
+  transporte: 0,
+  colegios: 0,
+  hospitales: 0,
+  vida: 0,
+  terreno: 'all',
+  precioMin: 500,
+  precioMax: 5000,
+};
+
+// ─── CARDS ───────────────────────────────────────────────────────────────────
+function scoreClass(s) { return s>=4?'good':s>=2.5?'mid':'low'; }
+
+function renderCards() {
   const grid = document.getElementById('cards-grid');
-  const data = filter === 'all' ? BARRIOS : BARRIOS.filter(b => b.zone === filter);
+  const data = BARRIOS.filter(b => {
+    if (filterState.zone !== 'all' && b.zone !== filterState.zone) return false;
+    if (b.seguridad < filterState.seguridad) return false;
+    if (b.transporte < filterState.transporte) return false;
+    if (b.colegios < filterState.colegios) return false;
+    if (b.hospitales < filterState.hospitales) return false;
+    if (b.vida < filterState.vida) return false;
+    if (filterState.terreno !== 'all' && b.terreno !== filterState.terreno) return false;
+    if (b.precioMax < filterState.precioMin) return false;
+    if (b.precioMin > filterState.precioMax) return false;
+    return true;
+  });
+
+  const count = document.getElementById('results-count');
+  if (count) count.innerHTML = `<b style="color:var(--accent)">${data.length}</b> barrio${data.length!==1?'s':''} encontrado${data.length!==1?'s':''}`;
+
   if (data.length === 0) {
-    grid.innerHTML = `<p style="color:var(--muted);font-size:0.9rem">No hay barrios para este filtro aún.</p>`;
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:10px">🔍</div>
+      <p>Ningún barrio coincide con estos filtros.</p>
+      <button onclick="resetFilters()" style="margin-top:12px;background:var(--accent);color:#0d1117;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-family:inherit">Limpiar filtros</button>
+    </div>`;
     return;
   }
+
   grid.innerHTML = data.map(b => `
     <div class="barrio-card" style="--card-accent:${b.color}">
       <div class="card-commune">${b.commune}</div>
@@ -781,27 +1049,94 @@ function renderCards(filter) {
       <div class="card-ratings">
         <div class="rating-pill">
           <span class="label">Alcaldía</span>
-          <span class="score ${b.adminScore>=4?'good':b.adminScore>=2.5?'mid':'low'}">★ ${b.adminScore.toFixed(1)}</span>
+          <span class="score ${scoreClass(b.adminScore)}">★ ${b.adminScore.toFixed(1)}</span>
         </div>
         <div class="rating-pill">
           <span class="label">Usuarios</span>
-          <span class="score ${b.userScore>=4?'good':b.userScore>=2.5?'mid':'low'}">★ ${b.userScore.toFixed(1)}</span>
+          <span class="score ${scoreClass(b.userScore)}">★ ${b.userScore.toFixed(1)}</span>
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;font-size:0.76rem">
+        <span style="color:var(--muted)">🛡️ Seg. <b style="color:${b.seguridad>=4?'var(--green)':'var(--accent)'}">${b.seguridad}</b></span>
+        <span style="color:var(--muted)">🚌 Trans. <b style="color:${b.transporte>=4?'var(--green)':'var(--accent)'}">${b.transporte}</b></span>
+        <span style="color:var(--muted)">🎓 Educ. <b style="color:${b.colegios>=4?'var(--green)':'var(--accent)'}">${b.colegios}</b></span>
+        <span style="color:var(--muted)">🏥 Salud <b style="color:${b.hospitales>=4?'var(--green)':'var(--accent)'}">${b.hospitales}</b></span>
+        <span style="color:var(--muted)">🎭 Vida <b style="color:${b.vida>=4?'var(--green)':'var(--accent)'}">${b.vida}</b></span>
+        <span style="color:var(--muted)">⛰️ <b style="color:var(--text)">${b.terreno.charAt(0).toUpperCase()+b.terreno.slice(1)}</b></span>
       </div>
       <div class="card-tags">${b.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
       <div class="card-footer">
-        <div class="reviews-count">💬 ${b.reviews} opiniones</div>
+        <div style="font-size:0.8rem;color:var(--accent)">
+          💰 $${b.precioMin}k – $${b.precioMax}k
+        </div>
         <a href="#" style="color:var(--accent);font-size:0.82rem;text-decoration:none">Ver más →</a>
       </div>
     </div>
   `).join('');
 }
-renderCards('all');
+renderCards();
 
-function filterCards(btn, zone) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+// ─── FILTER CONTROLS ─────────────────────────────────────────────────────────
+function setZone(btn, zone) {
+  document.querySelectorAll('#zone-tabs .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderCards(zone);
+  filterState.zone = zone;
+  renderCards();
+}
+
+function setStarFilter(key, val) {
+  filterState[key] = val;
+  const group = document.getElementById('filter-' + key);
+  group.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
+  // find and activate the clicked button
+  const btns = group.querySelectorAll('.star-btn');
+  btns.forEach(b => {
+    const bVal = b.textContent === 'Todas' ? 0 : parseInt(b.textContent);
+    if (bVal === val) b.classList.add('active');
+  });
+  renderCards();
+}
+
+function setTerrain(btn, val) {
+  document.querySelectorAll('#filter-terreno .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterState.terreno = val;
+  renderCards();
+}
+
+function updateRange() {
+  let minVal = parseInt(document.getElementById('price-min').value);
+  let maxVal = parseInt(document.getElementById('price-max').value);
+  if (minVal > maxVal) { const t = minVal; minVal = maxVal; maxVal = t; }
+  filterState.precioMin = minVal;
+  filterState.precioMax = maxVal;
+  document.getElementById('price-min-val').textContent = minVal >= 5000 ? '$5M+' : `$${minVal}k`;
+  document.getElementById('price-max-val').textContent = maxVal >= 5000 ? '$5M+' : `$${maxVal}k`;
+  renderCards();
+}
+
+function resetFilters() {
+  filterState.zone = 'all';
+  filterState.seguridad = 0;
+  filterState.transporte = 0;
+  filterState.colegios = 0;
+  filterState.hospitales = 0;
+  filterState.vida = 0;
+  filterState.terreno = 'all';
+  filterState.precioMin = 500;
+  filterState.precioMax = 5000;
+  document.getElementById('price-min').value = 500;
+  document.getElementById('price-max').value = 5000;
+  document.getElementById('price-min-val').textContent = '$500k';
+  document.getElementById('price-max-val').textContent = '$5M+';
+  document.querySelectorAll('#zone-tabs .filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('#filter-terreno .toggle-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  ['seguridad','transporte','colegios','hospitales','vida'].forEach(key => {
+    document.querySelectorAll(`#filter-${key} .star-btn`).forEach(b => {
+      b.classList.toggle('active', b.textContent === 'Todas');
+    });
+  });
+  renderCards();
 }
 
 // ─── SEARCH ─────────────────────────────────────────────────────────────────
