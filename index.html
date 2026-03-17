@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BarrioVoz – Medellín</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1e2530;
+      --accent: #e8c547;
+      --accent2: #f5832a;
+      --text: #e8e8e0;
+      --muted: #8b8f96;
+      --border: #2a3040;
+      --green: #4caf82;
+      --red: #e05c5c;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 40px;
+      background: rgba(13,17,23,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Fraunces', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--text); }
+    nav ul { list-style: none; display: flex; gap: 32px; }
+    nav ul a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: color 0.2s;
+    }
+    nav ul a:hover { color: var(--text); }
+    .nav-btn {
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .nav-btn:hover { opacity: 0.85; }
+
+    /* HERO */
+    .hero {
+      padding: 120px 40px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      max-width: 1300px;
+      margin: 0 auto;
+      align-items: start;
+    }
+    .hero-text { padding-top: 20px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(232,197,71,0.12);
+      border: 1px solid rgba(232,197,71,0.3);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      color: var(--accent);
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+    .hero-badge::before { content: '●'; font-size: 0.6rem; animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    h1 {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(2.8rem, 5vw, 4.2rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+    }
+    h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .hero-sub {
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      max-width: 480px;
+      margin-bottom: 36px;
+    }
+
+    /* SEARCH BOX */
+    .search-wrap {
+      display: flex;
+      gap: 0;
+      max-width: 500px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232,197,71,0.12);
+    }
+    .search-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      padding: 14px 18px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+    }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-btn {
+      background: var(--accent);
+      border: none;
+      padding: 0 22px;
+      color: #0d1117;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .search-btn:hover { opacity: 0.85; }
+
+    /* SEARCH SUGGESTIONS */
+    #search-suggestions {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    #search-suggestions.visible { display: block; }
+    .suggestion-item {
+      padding: 12px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      transition: background 0.15s;
+    }
+    .suggestion-item:hover { background: var(--border); }
+    .suggestion-item .s-icon { color: var(--accent); font-size: 0.8rem; }
+
+    .search-container { position: relative; max-width: 500px; }
+
+    .hero-stats {
+      display: flex; gap: 32px; margin-top: 36px;
+    }
+    .stat { display: flex; flex-direction: column; gap: 2px; }
+    .stat-num {
+      font-family: 'Fraunces', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); }
+
+    /* MAP PANEL */
+    .map-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      height: 520px;
+      position: relative;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    }
+    #map { width: 100%; height: 100%; }
+
+    .map-legend {
+      position: absolute; bottom: 16px; left: 16px; z-index: 500;
+      background: rgba(13,17,23,0.9);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      backdrop-filter: blur(8px);
+    }
+    .legend-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+    /* BARRIOS SECTION */
+    .section {
+      max-width: 1300px;
+      margin: 80px auto 0;
+      padding: 0 40px;
+    }
+    .section-header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .section-title span { color: var(--accent); }
+    .see-all {
+      color: var(--accent);
+      font-size: 0.88rem;
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 1px solid rgba(232,197,71,0.3);
+      padding-bottom: 2px;
+      transition: border-color 0.2s;
+    }
+    .see-all:hover { border-color: var(--accent); }
+
+    /* BARRIO CARDS */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .barrio-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .barrio-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--card-accent, var(--accent));
+    }
+    .barrio-card:hover {
+      border-color: var(--card-accent, var(--accent));
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    .card-commune {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .card-name {
+      font-family: 'Fraunces', serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .card-ratings {
+      display: flex; gap: 10px; margin-bottom: 14px;
+    }
+    .rating-pill {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+    .rating-pill .label { color: var(--muted); }
+    .rating-pill .score { font-weight: 600; }
+    .score.good { color: var(--green); }
+    .score.mid { color: var(--accent); }
+    .score.low { color: var(--red); }
+    .card-tags {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .tag {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .reviews-count { display: flex; align-items: center; gap: 5px; }
+
+    /* FILTER BAR */
+    .filter-bar {
+      display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 7px 16px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--accent);
+      color: #0d1117;
+      border-color: var(--accent);
+    }
+
+    /* HOW IT WORKS */
+    .how-section {
+      max-width: 1300px;
+      margin: 100px auto 0;
+      padding: 0 40px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .how-text .section-title { margin-bottom: 20px; }
+    .how-desc { color: var(--muted); line-height: 1.7; margin-bottom: 32px; }
+    .steps { display: flex; flex-direction: column; gap: 20px; }
+    .step {
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .step-num {
+      width: 32px; height: 32px;
+      background: rgba(232,197,71,0.12);
+      border: 1px solid rgba(232,197,71,0.3);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Fraunces', serif;
+      font-size: 0.9rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .step-info h4 { font-size: 0.95rem; margin-bottom: 4px; }
+    .step-info p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+    .how-visual {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+    }
+    .rating-demo { display: flex; flex-direction: column; gap: 16px; }
+    .rating-row { display: flex; flex-direction: column; gap: 6px; }
+    .rating-row-header { display: flex; justify-content: space-between; font-size: 0.85rem; }
+    .rating-bar-bg {
+      background: var(--surface2);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .rating-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--accent);
+      animation: fillBar 1.5s ease forwards;
+      transform-origin: left;
+    }
+    @keyframes fillBar { from{width:0} }
+
+    /* FOOTER */
+    footer {
+      margin-top: 100px;
+      border-top: 1px solid var(--border);
+      padding: 40px 40px;
+      max-width: 1300px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-logo {
+      font-family: 'Fraunces', serif;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    .footer-text { font-size: 0.8rem; color: var(--muted); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--text); }
+
+    /* POPUP */
+    .leaflet-popup-content-wrapper {
+      background: var(--surface2) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 10px !important;
+      color: var(--text) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    }
+    .leaflet-popup-tip { background: var(--surface2) !important; }
+    .popup-barrio h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    .popup-barrio p { font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+    .popup-ratings { display: flex; gap: 8px; margin-bottom: 10px; }
+    .popup-pill {
+      background: rgba(255,255,255,0.05);
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 0.78rem;
+    }
+    .popup-btn {
+      display: block; width: 100%;
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    /* SCROLL ANIMATION */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .map-panel { height: 360px; }
+      .cards-grid { grid-template-columns: 1fr 1fr; }
+      .how-section { grid-template-columns: 1fr; }
+      nav ul { display: none; }
+    }
+    @media (max-width: 600px) {
+      .cards-grid { grid-template-columns: 1fr; }
+      .hero { padding: 100px 20px 0; }
+      .section { padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Barrio<span>Voz</span></div>
+  <ul>
+    <li><a href="#">Explorar</a></li>
+    <li><a href="#">Comunas</a></li>
+    <li><a href="#">Comparar</a></li>
+    <li><a href="#">Acerca de</a></li>
+  </ul>
+  <button class="nav-btn">Dejar opinión</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text fade-up">
+    <div class="hero-badge">Medellín · Código abierto · Actualizado 2025</div>
+    <h1>Conoce tu próximo <em>barrio</em> antes de vivir en él</h1>
+    <p class="hero-sub">Opiniones reales de residentes sobre cada barrio de Medellín. Compara calificaciones, seguridad, servicios y calidad de vida para tomar la mejor decisión al rentar o comprar.</p>
+
+    <div class="search-container">
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="Busca un barrio, p. ej. El Poblado…" autocomplete="off"/>
+        <button class="search-btn">→</button>
+      </div>
+      <div id="search-suggestions"></div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">249</span><span class="stat-label">Barrios</span></div>
+      <div class="stat"><span class="stat-num">16</span><span class="stat-label">Comunas</span></div>
+      <div class="stat"><span class="stat-num">4.8k</span><span class="stat-label">Opiniones</span></div>
+      <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Open source</span></div>
+    </div>
+  </div>
+
+  <div class="map-panel fade-up" style="transition-delay:0.15s">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-row"><div class="legend-dot" style="background:#4caf82"></div> Bien calificado (4–5)</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#e8c547"></div> Calificación media (2.5–4)</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#e05c5c"></div> Calificación baja (0–2.5)</div>
+    </div>
+  </div>
+</section>
+
+<!-- BARRIOS DESTACADOS -->
+<section class="section fade-up" style="margin-top:80px">
+  <div class="section-header">
+    <h2 class="section-title">Barrios <span>destacados</span></h2>
+    <a href="#" class="see-all">Ver todos →</a>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterCards(this,'all')">Todos</button>
+    <button class="filter-btn" onclick="filterCards(this,'norte')">Norte</button>
+    <button class="filter-btn" onclick="filterCards(this,'sur')">Sur</button>
+    <button class="filter-btn" onclick="filterCards(this,'centro')">Centro</button>
+    <button class="filter-btn" onclick="filterCards(this,'occidente')">Occidente</button>
+    <button class="filter-btn" onclick="filterCards(this,'oriente')">Oriente</button>
+  </div>
+
+  <div class="cards-grid" id="cards-grid"></div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section class="how-section fade-up">
+  <div class="how-text">
+    <h2 class="section-title">¿Cómo <span>funciona</span>?</h2>
+    <p class="how-desc">BarrioVoz combina datos oficiales de la Alcaldía de Medellín con opiniones de residentes reales para darte una visión completa de cada zona.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-info">
+          <h4>Explora el mapa</h4>
+          <p>Visualiza todos los barrios de Medellín con sus polígonos y calificaciones en tiempo real.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-info">
+          <h4>Lee opiniones detalladas</h4>
+          <p>Cada barrio tiene reseñas sobre seguridad, transporte, servicios, ruido y comunidad.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-info">
+          <h4>Compara y decide</h4>
+          <p>Usa nuestras herramientas de comparación para encontrar el barrio ideal según tu presupuesto y estilo de vida.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-info">
+          <h4>Comparte tu experiencia</h4>
+          <p>¿Ya vives en Medellín? Tu opinión ayuda a quienes están buscando su próximo hogar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="how-visual">
+    <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px">Calificación promedio · El Poblado</p>
+    <div class="rating-demo">
+      <div class="rating-row">
+        <div class="rating-row-header"><span>Seguridad</span><span style="color:var(--green)">4.2</span></div>
+        <div class="rating-bar-bg"><div class="rating-bar-fill" style="width:84%;background:var(--green)"></div></div>
+      </div>
+      <div class="rating-row">
+        <div class="rating-row-header"><span>Transporte</span><span style="color:var(--accent)">3.7</span></div>
+        <div class="rating-bar-bg"><div class="rating-bar-fill" style="width:74%;background:var(--accent)"></div></div>
+      </div>
+      <div class="rating-row">
+        <div class="rating-row-header"><span>Servicios</span><span style="color:var(--green)">4.6</span></div>
+        <div class="rating-bar-bg"><div class="rating-bar-fill" style="width:92%;background:var(--green)"></div></div>
+      </div>
+      <div class="rating-row">
+        <div class="rating-row-header"><span>Ruido</span><span style="color:var(--red)">2.1</span></div>
+        <div class="rating-bar-bg"><div class="rating-bar-fill" style="width:42%;background:var(--red)"></div></div>
+      </div>
+      <div class="rating-row">
+        <div class="rating-row-header"><span>Comunidad</span><span style="color:var(--green)">4.4</span></div>
+        <div class="rating-bar-bg"><div class="rating-bar-fill" style="width:88%;background:var(--green)"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">BarrioVoz</div>
+  <p class="footer-text">© 2025 BarrioVoz · Medellín · Licencia MIT</p>
+  <div class="footer-links">
+    <a href="#">GitHub</a>
+    <a href="#">API</a>
+    <a href="#">Contribuir</a>
+    <a href="#">Contacto</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const BARRIOS = [
+  { name:"El Poblado", commune:"Comuna 14", zone:"sur", adminScore:4.4, userScore:4.2, tags:["Gastronómico","Turístico","Nightlife"], reviews:312, color:"#4caf82" },
+  { name:"Laureles", commune:"Comuna 11", zone:"occidente", adminScore:4.1, userScore:4.3, tags:["Familiar","Tranquilo","Comercial"], reviews:198, color:"#4caf82" },
+  { name:"Envigado Centro", commune:"Municipio Envigado", zone:"sur", adminScore:3.9, userScore:4.5, tags:["Seguro","Parques","Cafés"], reviews:145, color:"#4caf82" },
+  { name:"Aranjuez", commune:"Comuna 4", zone:"norte", adminScore:3.2, userScore:3.4, tags:["Histórico","Mercados","Comunidad"], reviews:87, color:"#e8c547" },
+  { name:"Belén", commune:"Comuna 16", zone:"sur", adminScore:3.8, userScore:3.6, tags:["Residencial","Colegios","Parques"], reviews:124, color:"#e8c547" },
+  { name:"Manrique", commune:"Comuna 3", zone:"norte", adminScore:2.8, userScore:3.1, tags:["Popular","Arte urbano","Escaleras"], reviews:63, color:"#e8c547" },
+];
+
+const NEIGHBORHOODS_MOCK = [
+  { name:"El Poblado", lat:6.2087, lng:-75.5671, score:4.3 },
+  { name:"Laureles", lat:6.2510, lng:-75.5880, score:4.2 },
+  { name:"Belén", lat:6.2262, lng:-75.6012, score:3.7 },
+  { name:"Aranjuez", lat:6.2770, lng:-75.5540, score:3.4 },
+  { name:"Manrique", lat:6.2820, lng:-75.5490, score:3.1 },
+  { name:"Robledo", lat:6.2700, lng:-75.6000, score:3.6 },
+  { name:"Buenos Aires", lat:6.2410, lng:-75.5600, score:3.5 },
+  { name:"La América", lat:6.2520, lng:-75.5990, score:3.8 },
+  { name:"Castilla", lat:6.2950, lng:-75.5700, score:3.2 },
+  { name:"Doce de Octubre", lat:6.3010, lng:-75.5580, score:3.0 },
+  { name:"Villa Hermosa", lat:6.2550, lng:-75.5490, score:3.3 },
+  { name:"San Javier", lat:6.2570, lng:-75.6050, score:3.1 },
+  { name:"Guayabal", lat:6.2090, lng:-75.5950, score:3.4 },
+  { name:"Palmitas", lat:6.3780, lng:-75.6430, score:3.8 },
+  { name:"Altavista", lat:6.2220, lng:-75.6200, score:3.2 },
+];
+
+function scoreColor(s) {
+  if (s >= 4) return "#4caf82";
+  if (s >= 2.5) return "#e8c547";
+  return "#e05c5c";
+}
+
+// ─── MAP ────────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: false, scrollWheelZoom: false })
+  .setView([6.2476, -75.5658], 12);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap contributors &copy; CartoDB',
+  maxZoom: 19
+}).addTo(map);
+
+L.control.zoom({ position:'topright' }).addTo(map);
+
+// ─── MOCK SCORES (se reemplazarán con BD real) ───────────────────────────────
+function mockScore() { return +(2.5 + Math.random() * 2.5).toFixed(1); }
+function mockReviews() { return Math.floor(20 + Math.random() * 280); }
+
+// ─── LOADING INDICATOR ───────────────────────────────────────────────────────
+const loadingCtrl = L.control({ position: 'topright' });
+loadingCtrl.onAdd = function() {
+  const d = L.DomUtil.create('div');
+  d.id = 'map-loading';
+  d.innerHTML = '⏳ Cargando barrios…';
+  d.style.cssText = 'background:rgba(13,17,23,0.85);color:#e8c547;padding:6px 12px;border-radius:6px;font-size:0.78rem;border:1px solid #2a3040;';
+  return d;
+};
+loadingCtrl.addTo(map);
+
+// ─── LOAD REAL GEOJSON FROM GEOMEDELLÍN ──────────────────────────────────────
+// API pública de la Alcaldía de Medellín – límite de barrios y veredas
+const GEOMEDELLIN_URL =
+  'https://services5.arcgis.com/Rlf2lD2V3LCfbOLG/arcgis/rest/services/Barrio_Vereda/FeatureServer/0/query' +
+  '?where=1%3D1&outFields=NOMBRE,CODIGO_BAR,TIPO,OBJECTID&outSR=4326&f=geojson&resultRecordCount=300';
+
+let geojsonLayer = null;
+
+fetch(GEOMEDELLIN_URL)
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(data => {
+    const loading = document.getElementById('map-loading');
+    if (loading) loading.remove();
+
+    geojsonLayer = L.geoJSON(data, {
+      style: feature => {
+        const score = mockScore();
+        const color = scoreColor(score);
+        feature.properties._score = score;
+        feature.properties._reviews = mockReviews();
+        return {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.3,
+          weight: 1,
+          opacity: 0.8
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const p = feature.properties;
+        const name = p.NOMBRE || 'Barrio';
+        const score = p._score || mockScore();
+        const reviews = p._reviews || mockReviews();
+        const color = scoreColor(score);
+
+        layer.on('mouseover', function() {
+          this.setStyle({ fillOpacity: 0.6, weight: 2 });
+        });
+        layer.on('mouseout', function() {
+          this.setStyle({ fillOpacity: 0.3, weight: 1 });
+        });
+
+        layer.bindPopup(`
+          <div class="popup-barrio">
+            <h3>${name}</h3>
+            <p>${p.TIPO === 'B' ? 'Barrio urbano' : 'Vereda rural'}</p>
+            <div class="popup-ratings">
+              <div class="popup-pill" style="color:${color}">★ ${score.toFixed(1)}</div>
+              <div class="popup-pill">📝 ${reviews} reseñas</div>
+            </div>
+            <a class="popup-btn" href="#">Ver barrio completo →</a>
+          </div>
+        `);
+      }
+    }).addTo(map);
+
+    // Ajustar vista al extent real de Medellín
+    map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
+  })
+  .catch(err => {
+    console.warn('GeoMedellín no disponible, usando puntos de referencia:', err);
+    const loading = document.getElementById('map-loading');
+    if (loading) loading.innerHTML = '⚠️ Modo offline';
+
+    // Fallback: círculos de referencia
+    NEIGHBORHOODS_MOCK.forEach(n => {
+      const color = scoreColor(n.score);
+      L.circle([n.lat, n.lng], {
+        radius: 500, color, fillColor: color, fillOpacity: 0.35, weight: 1.5
+      }).addTo(map).bindPopup(`
+        <div class="popup-barrio">
+          <h3>${n.name}</h3>
+          <p>Datos de referencia</p>
+          <div class="popup-ratings">
+            <div class="popup-pill" style="color:${color}">★ ${n.score.toFixed(1)}</div>
+          </div>
+          <a class="popup-btn" href="#">Ver barrio →</a>
+        </div>
+      `);
+    });
+  });
+
+// ─── CARDS ──────────────────────────────────────────────────────────────────
+function renderCards(filter) {
+  const grid = document.getElementById('cards-grid');
+  const data = filter === 'all' ? BARRIOS : BARRIOS.filter(b => b.zone === filter);
+  if (data.length === 0) {
+    grid.innerHTML = `<p style="color:var(--muted);font-size:0.9rem">No hay barrios para este filtro aún.</p>`;
+    return;
+  }
+  grid.innerHTML = data.map(b => `
+    <div class="barrio-card" style="--card-accent:${b.color}">
+      <div class="card-commune">${b.commune}</div>
+      <div class="card-name">${b.name}</div>
+      <div class="card-ratings">
+        <div class="rating-pill">
+          <span class="label">Alcaldía</span>
+          <span class="score ${b.adminScore>=4?'good':b.adminScore>=2.5?'mid':'low'}">★ ${b.adminScore.toFixed(1)}</span>
+        </div>
+        <div class="rating-pill">
+          <span class="label">Usuarios</span>
+          <span class="score ${b.userScore>=4?'good':b.userScore>=2.5?'mid':'low'}">★ ${b.userScore.toFixed(1)}</span>
+        </div>
+      </div>
+      <div class="card-tags">${b.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="card-footer">
+        <div class="reviews-count">💬 ${b.reviews} opiniones</div>
+        <a href="#" style="color:var(--accent);font-size:0.82rem;text-decoration:none">Ver más →</a>
+      </div>
+    </div>
+  `).join('');
+}
+renderCards('all');
+
+function filterCards(btn, zone) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards(zone);
+}
+
+// ─── SEARCH ─────────────────────────────────────────────────────────────────
+const allNeighborhoods = [
+  "El Poblado","Laureles","Envigado","Aranjuez","Belén","Manrique",
+  "Robledo","Buenos Aires","La América","Castilla","Doce de Octubre",
+  "Villa Hermosa","San Javier","Guayabal","Palmitas","Altavista",
+  "El Centro","Candelaria","Santa Cruz","Trinidad","Floresta",
+  "Los Colores","Calasanz","La Floresta","Bello","Itagüí"
+];
+
+const searchInput = document.getElementById('search-input');
+const suggestionsBox = document.getElementById('search-suggestions');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (q.length < 2) { suggestionsBox.innerHTML=''; suggestionsBox.classList.remove('visible'); return; }
+  const matches = allNeighborhoods.filter(n => n.toLowerCase().includes(q)).slice(0, 6);
+  if (matches.length === 0) { suggestionsBox.classList.remove('visible'); return; }
+  suggestionsBox.innerHTML = matches.map(n => `
+    <div class="suggestion-item" onclick="selectBarrio('${n}')">
+      <span class="s-icon">📍</span> ${n}
+    </div>
+  `).join('');
+  suggestionsBox.classList.add('visible');
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-container')) suggestionsBox.classList.remove('visible');
+});
+
+function selectBarrio(name) {
+  searchInput.value = name;
+  suggestionsBox.classList.remove('visible');
+  const found = NEIGHBORHOODS_MOCK.find(n => n.name === name);
+  if (found) map.flyTo([found.lat, found.lng], 15, { duration: 1.2 });
+}
+
+// ─── SCROLL ANIMATIONS ───────────────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
