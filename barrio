@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BarrioVoz – Barrio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --surface2: #1e2530;
+      --accent: #e8c547; --text: #e8e8e0; --muted: #8b8f96;
+      --border: #2a3040; --green: #4caf82; --red: #e05c5c;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; }
+
+    /* NAV */
+    nav {
+      position:fixed; top:0; left:0; right:0; z-index:1000;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:18px 40px;
+      background:rgba(13,17,23,0.9); backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+    }
+    .logo { font-family:'Fraunces',serif; font-size:1.4rem; font-weight:700; color:var(--accent); text-decoration:none; }
+    .logo span { color:var(--text); }
+    .back-btn {
+      display:flex; align-items:center; gap:8px;
+      color:var(--muted); text-decoration:none; font-size:0.88rem;
+      border:1px solid var(--border); border-radius:6px; padding:7px 14px;
+      transition:all 0.2s;
+    }
+    .back-btn:hover { color:var(--text); border-color:var(--text); }
+    .nav-btn {
+      background:var(--accent); color:#0d1117; border:none;
+      padding:9px 20px; border-radius:6px;
+      font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500;
+      cursor:pointer;
+    }
+
+    /* HERO BARRIO */
+    .barrio-hero {
+      padding:100px 40px 0;
+      max-width:1300px; margin:0 auto;
+    }
+    .breadcrumb {
+      font-size:0.78rem; color:var(--muted); margin-bottom:16px;
+    }
+    .breadcrumb a { color:var(--accent); text-decoration:none; }
+    .barrio-hero-inner {
+      display:grid; grid-template-columns:1fr auto;
+      align-items:start; gap:40px; margin-bottom:40px;
+    }
+    .barrio-name {
+      font-family:'Fraunces',serif;
+      font-size:clamp(2.5rem,5vw,4rem);
+      font-weight:700; letter-spacing:-1.5px;
+      line-height:1.05;
+    }
+    .barrio-commune {
+      font-size:0.88rem; color:var(--muted);
+      text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;
+    }
+    .barrio-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+    .tag {
+      background:rgba(255,255,255,0.05); border:1px solid var(--border);
+      border-radius:4px; padding:4px 10px; font-size:0.75rem; color:var(--muted);
+    }
+    .score-badges { display:flex; flex-direction:column; gap:12px; align-items:flex-end; }
+    .score-badge {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:16px 20px; text-align:center; min-width:120px;
+    }
+    .score-badge .sb-label { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
+    .score-badge .sb-num {
+      font-family:'Fraunces',serif; font-size:2.4rem; font-weight:700; line-height:1;
+    }
+    .score-badge .sb-sub { font-size:0.72rem; color:var(--muted); margin-top:4px; }
+
+    /* MAIN GRID */
+    .main-grid {
+      max-width:1300px; margin:0 auto; padding:0 40px 80px;
+      display:grid; grid-template-columns:1fr 360px; gap:32px;
+    }
+    .left-col { display:flex; flex-direction:column; gap:28px; }
+    .right-col { display:flex; flex-direction:column; gap:24px; }
+
+    /* CARDS */
+    .panel {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:24px;
+    }
+    .panel-title {
+      font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700;
+      margin-bottom:20px; display:flex; align-items:center; gap:10px;
+    }
+    .panel-title span { font-size:1.2rem; }
+
+    /* MAP */
+    #barrio-map { height:320px; border-radius:10px; overflow:hidden; }
+
+    /* RATINGS */
+    .ratings-grid { display:flex; flex-direction:column; gap:14px; }
+    .rating-row { display:flex; flex-direction:column; gap:6px; }
+    .rating-header {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:0.88rem;
+    }
+    .rating-header .r-label { color:var(--text); }
+    .rating-header .r-score { font-weight:600; }
+    .r-score.good { color:var(--green); }
+    .r-score.mid  { color:var(--accent); }
+    .r-score.low  { color:var(--red); }
+    .bar-bg { background:var(--surface2); border-radius:4px; height:8px; }
+    .bar-fill { height:100%; border-radius:4px; transition:width 1s ease; }
+
+    /* PRACTICAL INFO */
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .info-item {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; padding:14px;
+    }
+    .info-item .ii-icon { font-size:1.4rem; margin-bottom:6px; }
+    .info-item .ii-label { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; }
+    .info-item .ii-value { font-size:0.95rem; font-weight:500; margin-top:2px; }
+    .info-item .ii-detail { font-size:0.75rem; color:var(--muted); margin-top:3px; }
+
+    /* PRICES */
+    .price-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .price-card {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; padding:18px; text-align:center;
+    }
+    .price-card .pc-type { font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+    .price-card .pc-range { font-family:'Fraunces',serif; font-size:1.3rem; color:var(--accent); font-weight:700; }
+    .price-card .pc-unit { font-size:0.72rem; color:var(--muted); margin-top:4px; }
+    .price-card .pc-trend { font-size:0.75rem; margin-top:8px; padding:3px 8px; border-radius:4px; display:inline-block; }
+    .trend-up { background:rgba(76,175,130,0.12); color:var(--green); }
+    .trend-down { background:rgba(224,92,92,0.12); color:var(--red); }
+
+    /* NEARBY */
+    .nearby-list { display:flex; flex-direction:column; gap:10px; }
+    .nearby-item {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--surface2); border-radius:8px; padding:12px 14px;
+      font-size:0.85rem;
+    }
+    .nearby-item .ni-left { display:flex; align-items:center; gap:10px; }
+    .nearby-item .ni-icon { font-size:1.1rem; }
+    .nearby-item .ni-name { font-weight:500; }
+    .nearby-item .ni-type { font-size:0.72rem; color:var(--muted); }
+    .nearby-item .ni-dist { color:var(--accent); font-size:0.8rem; font-weight:500; }
+
+    /* SCORE SUMMARY SIDEBAR */
+    .score-summary {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:20px;
+    }
+    .ss-title { font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:16px; }
+    .ss-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:8px 0; border-bottom:1px solid var(--border); font-size:0.85rem;
+    }
+    .ss-row:last-child { border:none; }
+    .ss-row .ss-name { color:var(--muted); }
+    .ss-row .ss-val { font-weight:600; }
+
+    /* SHARE / CTA */
+    .cta-panel {
+      background:linear-gradient(135deg,rgba(232,197,71,0.12),rgba(245,131,42,0.08));
+      border:1px solid rgba(232,197,71,0.25); border-radius:14px; padding:22px;
+      text-align:center;
+    }
+    .cta-panel h4 { font-family:'Fraunces',serif; font-size:1.1rem; margin-bottom:8px; }
+    .cta-panel p { font-size:0.82rem; color:var(--muted); margin-bottom:16px; line-height:1.5; }
+    .cta-btn {
+      display:block; width:100%;
+      background:var(--accent); color:#0d1117; border:none;
+      padding:12px; border-radius:8px;
+      font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:600;
+      cursor:pointer; text-decoration:none; text-align:center;
+      transition:opacity 0.2s;
+    }
+    .cta-btn:hover { opacity:0.85; }
+    .cta-btn-ghost {
+      display:block; width:100%; margin-top:8px;
+      background:none; color:var(--muted); border:1px solid var(--border);
+      padding:10px; border-radius:8px;
+      font-family:'DM Sans',sans-serif; font-size:0.85rem;
+      cursor:pointer; text-decoration:none; text-align:center;
+      transition:all 0.2s;
+    }
+    .cta-btn-ghost:hover { border-color:var(--text); color:var(--text); }
+
+    /* TERRAIN BADGE */
+    .terrain-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:500;
+    }
+    .terrain-plano    { background:rgba(76,175,130,0.12); color:var(--green); border:1px solid rgba(76,175,130,0.3); }
+    .terrain-moderado { background:rgba(232,197,71,0.12); color:var(--accent); border:1px solid rgba(232,197,71,0.3); }
+    .terrain-empinado { background:rgba(224,92,92,0.12);  color:var(--red);    border:1px solid rgba(224,92,92,0.3); }
+
+    /* LEAFLET DARK */
+    .leaflet-popup-content-wrapper {
+      background:var(--surface2)!important; border:1px solid var(--border)!important;
+      border-radius:10px!important; color:var(--text)!important;
+    }
+    .leaflet-popup-tip { background:var(--surface2)!important; }
+
+    @media(max-width:900px) {
+      .main-grid { grid-template-columns:1fr; }
+      .barrio-hero-inner { grid-template-columns:1fr; }
+      .score-badges { flex-direction:row; align-items:flex-start; }
+      nav .nav-btn { display:none; }
+      .main-grid { padding:0 20px 60px; }
+      .barrio-hero { padding:90px 20px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="index.html">Barrio<span>Voz</span></a>
+  <a class="back-btn" href="index.html">← Volver al mapa</a>
+  <button class="nav-btn">Dejar opinión</button>
+</nav>
+
+<div class="barrio-hero">
+  <div class="breadcrumb">
+    <a href="index.html">Inicio</a> › <a href="index.html">Barrios</a> › <span id="bc-name">…</span>
+  </div>
+  <div class="barrio-hero-inner">
+    <div>
+      <div class="barrio-commune" id="b-commune">Cargando…</div>
+      <h1 class="barrio-name" id="b-name">…</h1>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+        <div class="terrain-badge" id="b-terrain"></div>
+        <span style="color:var(--muted);font-size:0.82rem" id="b-reviews"></span>
+      </div>
+      <div class="barrio-tags" id="b-tags"></div>
+    </div>
+    <div class="score-badges">
+      <div class="score-badge">
+        <div class="sb-label">BarrioVoz</div>
+        <div class="sb-num" id="score-bv" style="color:var(--accent)">—</div>
+        <div class="sb-sub">/ 5.0</div>
+      </div>
+      <div class="score-badge">
+        <div class="sb-label">Usuarios</div>
+        <div class="sb-num" id="score-us" style="color:var(--green)">—</div>
+        <div class="sb-sub">/ 5.0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- LEFT COL -->
+  <div class="left-col">
+
+    <!-- MAPA -->
+    <div class="panel">
+      <div class="panel-title"><span>🗺️</span> Ubicación en Medellín</div>
+      <div id="barrio-map"></div>
+    </div>
+
+    <!-- CALIFICACIONES DETALLADAS -->
+    <div class="panel">
+      <div class="panel-title"><span>📊</span> Calificaciones detalladas</div>
+      <div class="ratings-grid" id="ratings-grid"></div>
+    </div>
+
+    <!-- INFORMACIÓN PRÁCTICA -->
+    <div class="panel">
+      <div class="panel-title"><span>📋</span> Información práctica</div>
+      <div class="info-grid" id="info-grid"></div>
+    </div>
+
+    <!-- PRECIOS -->
+    <div class="panel">
+      <div class="panel-title"><span>💰</span> Precios estimados</div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px">
+        Rangos aproximados basados en datos del mercado. Los precios varían según estrato, acabados y tamaño.
+      </p>
+      <div class="price-grid" id="price-grid"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COL -->
+  <div class="right-col">
+
+    <!-- RESUMEN DE PUNTAJES -->
+    <div class="score-summary">
+      <div class="ss-title">Resumen de calificaciones</div>
+      <div id="score-summary-rows"></div>
+    </div>
+
+    <!-- LUGARES CERCANOS -->
+    <div class="panel">
+      <div class="panel-title"><span>📍</span> Lugares cercanos</div>
+      <div class="nearby-list" id="nearby-list"></div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-panel">
+      <h4>¿Viviste aquí?</h4>
+      <p>Tu opinión ayuda a miles de personas a encontrar su próximo hogar en Medellín.</p>
+      <a href="#" class="cta-btn">✍️ Dejar mi opinión</a>
+      <a href="#" class="cta-btn-ghost">📤 Compartir este barrio</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── DATA (misma que index.html — en producción vendrá de una API) ────────────
+const BARRIOS_DB = {
+  "El Poblado": {
+    commune:"Comuna 14", zone:"sur",
+    bvScore:4.4, userScore:4.2, reviews:312,
+    tags:["Gastronómico","Turístico","Nightlife","Internacional"],
+    terreno:"plano",
+    seguridad:4.2, transporte:3.7, colegios:4.1,
+    hospitales:4.3, vida:4.8, ruido:2.1, verde:3.8,
+    lat:6.2087, lng:-75.5671,
+    precioArriendoMin:2500, precioArriendoMax:8000,
+    precioVentaMin:350000, precioVentaMax:1200000,
+    tendenciaArriendo:"up", tendenciaVenta:"up",
+    info: {
+      metro: "Estación El Poblado (Línea A)",
+      bus: "Rutas 185, 186, 187",
+      colegios: "5 colegios en radio 1km",
+      universidades: "U. EAFIT a 10 min",
+      hospitales: "Clínica El Rosario, CES",
+      parques: "Parque El Poblado",
+      estratos: "5 – 6",
+      estrato_num: 5,
+    },
+    nearby: [
+      { icon:"🚇", name:"Estación El Poblado", type:"Metro Línea A", dist:"300m" },
+      { icon:"🏥", name:"Clínica El Rosario", type:"Hospital", dist:"800m" },
+      { icon:"🎓", name:"U. EAFIT", type:"Universidad", dist:"1.2km" },
+      { icon:"🌳", name:"Parque El Poblado", type:"Parque", dist:"400m" },
+      { icon:"🛒", name:"El Tesoro", type:"Centro comercial", dist:"1.5km" },
+    ]
+  },
+  "Laureles": {
+    commune:"Comuna 11", zone:"occidente",
+    bvScore:4.1, userScore:4.3, reviews:198,
+    tags:["Familiar","Tranquilo","Comercial","Ciclismo"],
+    terreno:"plano",
+    seguridad:4.3, transporte:4.1, colegios:4.5,
+    hospitales:4.0, vida:4.2, ruido:2.8, verde:4.2,
+    lat:6.2510, lng:-75.5880,
+    precioArriendoMin:1800, precioArriendoMax:5000,
+    precioVentaMin:250000, precioVentaMax:700000,
+    tendenciaArriendo:"up", tendenciaVenta:"up",
+    info: {
+      metro: "Estación Suramericana (Línea A)",
+      bus: "Rutas 301, 302",
+      colegios: "8 colegios en radio 1km",
+      universidades: "U. Pontificia Bolivariana",
+      hospitales: "Clínica Medellín",
+      parques: "Estadio Atanasio, Av. El Poblado",
+      estratos: "4 – 5",
+      estrato_num: 4,
+    },
+    nearby: [
+      { icon:"🚇", name:"Est. Suramericana", type:"Metro Línea A", dist:"600m" },
+      { icon:"🏥", name:"Clínica Medellín", type:"Hospital", dist:"1.1km" },
+      { icon:"🎓", name:"U. Pontificia Bolivariana", type:"Universidad", dist:"900m" },
+      { icon:"🌳", name:"Av. El Poblado (ciclovía)", type:"Ciclovía", dist:"200m" },
+      { icon:"🛒", name:"Unicentro", type:"Centro comercial", dist:"700m" },
+    ]
+  },
+  "Envigado Centro": {
+    commune:"Municipio Envigado", zone:"sur",
+    bvScore:3.9, userScore:4.5, reviews:145,
+    tags:["Seguro","Parques","Cafés","Tranquilo"],
+    terreno:"plano",
+    seguridad:4.6, transporte:3.8, colegios:4.3,
+    hospitales:4.4, vida:4.0, ruido:2.5, verde:4.5,
+    lat:6.1730, lng:-75.5910,
+    precioArriendoMin:1500, precioArriendoMax:4500,
+    precioVentaMin:200000, precioVentaMax:600000,
+    tendenciaArriendo:"up", tendenciaVenta:"up",
+    info: {
+      metro: "Estación Envigado (Línea A)",
+      bus: "Rutas 401, 402",
+      colegios: "6 colegios en radio 1km",
+      universidades: "U. de Envigado",
+      hospitales: "Hospital Manuel Uribe Ángel",
+      parques: "Parque El Salado",
+      estratos: "3 – 5",
+      estrato_num: 4,
+    },
+    nearby: [
+      { icon:"🚇", name:"Est. Envigado", type:"Metro Línea A", dist:"500m" },
+      { icon:"🏥", name:"H. Manuel Uribe Ángel", type:"Hospital", dist:"900m" },
+      { icon:"🎓", name:"U. de Envigado", type:"Universidad", dist:"1km" },
+      { icon:"🌳", name:"Parque El Salado", type:"Parque natural", dist:"2km" },
+      { icon:"☕", name:"Zona de cafés", type:"Gastronomía", dist:"100m" },
+    ]
+  },
+  "Aranjuez": {
+    commune:"Comuna 4", zone:"norte",
+    bvScore:3.2, userScore:3.4, reviews:87,
+    tags:["Histórico","Mercados","Comunidad","Popular"],
+    terreno:"moderado",
+    seguridad:2.8, transporte:3.9, colegios:3.2,
+    hospitales:3.0, vida:3.6, ruido:3.5, verde:2.8,
+    lat:6.2770, lng:-75.5540,
+    precioArriendoMin:700, precioArriendoMax:1800,
+    precioVentaMin:80000, precioVentaMax:220000,
+    tendenciaArriendo:"up", tendenciaVenta:"down",
+    info: {
+      metro: "Estación Tricentenario (Línea A)",
+      bus: "Rutas 501, 502, 503",
+      colegios: "4 colegios en radio 1km",
+      universidades: "U. de Antioquia a 20 min",
+      hospitales: "Hospital General de Medellín",
+      parques: "Parque Aranjuez",
+      estratos: "2 – 3",
+      estrato_num: 2,
+    },
+    nearby: [
+      { icon:"🚇", name:"Est. Tricentenario", type:"Metro Línea A", dist:"800m" },
+      { icon:"🏥", name:"Hospital General", type:"Hospital público", dist:"1.5km" },
+      { icon:"🛒", name:"Mercado de Aranjuez", type:"Mercado popular", dist:"300m" },
+      { icon:"🌳", name:"Parque Aranjuez", type:"Parque barrial", dist:"200m" },
+      { icon:"🎭", name:"Casa de la Cultura", type:"Cultural", dist:"600m" },
+    ]
+  },
+  "Belén": {
+    commune:"Comuna 16", zone:"sur",
+    bvScore:3.8, userScore:3.6, reviews:124,
+    tags:["Residencial","Colegios","Parques","Familiar"],
+    terreno:"moderado",
+    seguridad:3.5, transporte:3.8, colegios:4.2,
+    hospitales:3.6, vida:3.4, ruido:2.9, verde:3.9,
+    lat:6.2262, lng:-75.6012,
+    precioArriendoMin:900, precioArriendoMax:2500,
+    precioVentaMin:120000, precioVentaMax:320000,
+    tendenciaArriendo:"up", tendenciaVenta:"up",
+    info: {
+      metro: "Estación Estadio (Línea A) + bus",
+      bus: "Rutas 201, 202, 205",
+      colegios: "7 colegios en radio 1km",
+      universidades: "ITM a 15 min",
+      hospitales: "Clínica Las Américas",
+      parques: "Parque Belén, Humedal",
+      estratos: "3 – 4",
+      estrato_num: 3,
+    },
+    nearby: [
+      { icon:"🏥", name:"Clínica Las Américas", type:"Hospital", dist:"1.2km" },
+      { icon:"🎓", name:"ITM", type:"Universidad", dist:"2km" },
+      { icon:"🌳", name:"Humedal La Tibabuyes", type:"Reserva natural", dist:"500m" },
+      { icon:"🛒", name:"Mayorca", type:"Centro comercial", dist:"3km" },
+      { icon:"🏫", name:"Colegio Belén", type:"Colegio público", dist:"400m" },
+    ]
+  },
+  "Manrique": {
+    commune:"Comuna 3", zone:"norte",
+    bvScore:2.8, userScore:3.1, reviews:63,
+    tags:["Popular","Arte urbano","Escaleras","Comunidad"],
+    terreno:"empinado",
+    seguridad:2.5, transporte:3.5, colegios:2.9,
+    hospitales:2.8, vida:3.2, ruido:3.1, verde:3.0,
+    lat:6.2820, lng:-75.5490,
+    precioArriendoMin:500, precioArriendoMax:1400,
+    precioVentaMin:60000, precioVentaMax:160000,
+    tendenciaArriendo:"up", tendenciaVenta:"down",
+    info: {
+      metro: "Metrocable Línea K",
+      bus: "Rutas 601, 602",
+      colegios: "3 colegios en radio 1km",
+      universidades: "U. de Antioquia a 25 min",
+      hospitales: "UBA Manrique",
+      parques: "Escaleras eléctricas, miradores",
+      estratos: "1 – 2",
+      estrato_num: 1,
+    },
+    nearby: [
+      { icon:"🚡", name:"Metrocable Línea K", type:"Cable aéreo", dist:"700m" },
+      { icon:"🏥", name:"UBA Manrique", type:"Centro salud", dist:"500m" },
+      { icon:"🎨", name:"Escaleras eléctricas", type:"Atractivo urbano", dist:"300m" },
+      { icon:"🌳", name:"Mirador de Manrique", type:"Espacio público", dist:"900m" },
+      { icon:"🏫", name:"IE Manrique", type:"Colegio", dist:"400m" },
+    ]
+  },
+  "Robledo": {
+    commune:"Comuna 7", zone:"occidente",
+    bvScore:3.4, userScore:3.7, reviews:98,
+    tags:["Universitario","Verde","Tranquilo","Jardines"],
+    terreno:"empinado",
+    seguridad:3.3, transporte:3.6, colegios:4.0,
+    hospitales:3.2, vida:3.5, ruido:2.6, verde:4.6,
+    lat:6.2700, lng:-75.6000,
+    precioArriendoMin:800, precioArriendoMax:2000,
+    precioVentaMin:100000, precioVentaMax:260000,
+    tendenciaArriendo:"up", tendenciaVenta:"up",
+    info: {
+      metro: "Bus + Estación Floresta",
+      bus: "Rutas 701, 702",
+      colegios: "5 colegios en radio 1km",
+      universidades: "U. Nacional de Colombia",
+      hospitales: "Hospital Pablo Tobón Uribe",
+      parques: "Jardín Botánico a 15 min",
+      estratos: "3 – 4",
+      estrato_num: 3,
+    },
+    nearby: [
+      { icon:"🎓", name:"U. Nacional de Colombia", type:"Universidad", dist:"900m" },
+      { icon:"🌿", name:"Jardín Botánico", type:"Parque", dist:"2km" },
+      { icon:"🏥", name:"H. Pablo Tobón Uribe", type:"Hospital", dist:"2.5km" },
+      { icon:"🛒", name:"Puerta del Norte", type:"Centro comercial", dist:"3km" },
+      { icon:"🌳", name:"Cerro El Volador", type:"Reserva natural", dist:"1.5km" },
+    ]
+  },
+  "La América": {
+    commune:"Comuna 12", zone:"occidente",
+    bvScore:3.7, userScore:3.9, reviews:112,
+    tags:["Comercial","Central","Activo","Conectado"],
+    terreno:"plano",
+    seguridad:3.6, transporte:4.3, colegios:3.8,
+    hospitales:3.9, vida:4.0, ruido:3.4, verde:3.0,
+    lat:6.2520, lng:-75.5990,
+    precioArriendoMin:1000, precioArriendoMax:2800,
+    precioVentaMin:140000, precioVentaMax:380000,
+    tendenciaArriendo:"up", tendenciaVenta:"up",
+    info: {
+      metro: "Estación Floresta (Línea A)",
+      bus: "Rutas 801, 802, 805",
+      colegios: "6 colegios en radio 1km",
+      universidades: "U. de Medellín a 10 min",
+      hospitales: "Clínica Soma",
+      parques: "Parque La América",
+      estratos: "3 – 4",
+      estrato_num: 3,
+    },
+    nearby: [
+      { icon:"🚇", name:"Est. Floresta", type:"Metro Línea A", dist:"400m" },
+      { icon:"🏥", name:"Clínica Soma", type:"Hospital", dist:"1km" },
+      { icon:"🎓", name:"U. de Medellín", type:"Universidad", dist:"1.5km" },
+      { icon:"🛒", name:"Av. 80 comercial", type:"Zona comercial", dist:"200m" },
+      { icon:"🌳", name:"Parque La América", type:"Parque", dist:"300m" },
+    ]
+  },
+};
+
+// ─── LOAD BARRIO FROM URL ─────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const nombreParam = params.get('nombre') || 'El Poblado';
+const B = BARRIOS_DB[nombreParam] || BARRIOS_DB['El Poblado'];
+const nombre = nombreParam in BARRIOS_DB ? nombreParam : 'El Poblado';
+
+// Fill header
+document.title = `BarrioVoz – ${nombre}`;
+document.getElementById('bc-name').textContent = nombre;
+document.getElementById('b-name').textContent = nombre;
+document.getElementById('b-commune').textContent = B.commune;
+document.getElementById('b-reviews').textContent = `💬 ${B.reviews} opiniones`;
+document.getElementById('score-bv').textContent = B.bvScore.toFixed(1);
+document.getElementById('score-us').textContent = B.userScore.toFixed(1);
+
+// Terrain badge
+const terrainEl = document.getElementById('b-terrain');
+const tLabels = { plano:'🟢 Terreno plano', moderado:'🟡 Terreno moderado', empinado:'🔴 Terreno empinado' };
+terrainEl.textContent = tLabels[B.terreno] || B.terreno;
+terrainEl.className = `terrain-badge terrain-${B.terreno}`;
+
+// Tags
+document.getElementById('b-tags').innerHTML = B.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+
+// ─── MAP ─────────────────────────────────────────────────────────────────────
+const map = L.map('barrio-map', { zoomControl:true, scrollWheelZoom:false })
+  .setView([B.lat, B.lng], 15);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap &copy; CartoDB', maxZoom:19
+}).addTo(map);
+
+// Highlight circle
+const scoreAvg = (B.bvScore + B.userScore) / 2;
+const mapColor = scoreAvg>=4?'#4caf82':scoreAvg>=2.5?'#e8c547':'#e05c5c';
+L.circle([B.lat, B.lng], {
+  radius:600, color:mapColor, fillColor:mapColor, fillOpacity:0.25, weight:2
+}).addTo(map).bindPopup(`<b style="color:${mapColor}">${nombre}</b><br>${B.commune}`).openPopup();
+
+// ─── RATINGS ─────────────────────────────────────────────────────────────────
+const ratings = [
+  { label:'🛡️ Seguridad',         val:B.seguridad },
+  { label:'🚌 Transporte público', val:B.transporte },
+  { label:'🎓 Colegios y educ.',   val:B.colegios },
+  { label:'🏥 Salud y hospitales', val:B.hospitales },
+  { label:'🎭 Vida de barrio',     val:B.vida },
+  { label:'🔇 Nivel de ruido',     val:B.ruido, invert:true },
+  { label:'🌿 Zonas verdes',       val:B.verde },
+];
+
+function rClass(v, invert) {
+  const eff = invert ? (5-v) : v;
+  return eff>=4?'good':eff>=2.5?'mid':'low';
+}
+function rColor(v, invert) {
+  const eff = invert ? (5-v) : v;
+  return eff>=4?'var(--green)':eff>=2.5?'var(--accent)':'var(--red)';
+}
+
+document.getElementById('ratings-grid').innerHTML = ratings.map(r => `
+  <div class="rating-row">
+    <div class="rating-header">
+      <span class="r-label">${r.label}</span>
+      <span class="r-score ${rClass(r.val,r.invert)}">${r.val.toFixed(1)} / 5</span>
+    </div>
+    <div class="bar-bg">
+      <div class="bar-fill" style="width:${r.val/5*100}%;background:${rColor(r.val,r.invert)}"></div>
+    </div>
+  </div>
+`).join('');
+
+// ─── SCORE SUMMARY SIDEBAR ───────────────────────────────────────────────────
+document.getElementById('score-summary-rows').innerHTML = [
+  { name:'BarrioVoz', val:B.bvScore, color:'var(--accent)' },
+  { name:'Usuarios',  val:B.userScore, color:'var(--green)' },
+  ...ratings.map(r=>({ name:r.label, val:r.val, color:rColor(r.val,r.invert) }))
+].map(r=>`
+  <div class="ss-row">
+    <span class="ss-name">${r.name}</span>
+    <span class="ss-val" style="color:${r.color}">★ ${r.val.toFixed(1)}</span>
+  </div>
+`).join('');
+
+// ─── PRACTICAL INFO ───────────────────────────────────────────────────────────
+const infoItems = [
+  { icon:'🚇', label:'Metro / Cable', value:B.info.metro },
+  { icon:'🚌', label:'Rutas de bus',  value:B.info.bus },
+  { icon:'🏫', label:'Colegios',      value:B.info.colegios },
+  { icon:'🎓', label:'Universidad',   value:B.info.universidades },
+  { icon:'🏥', label:'Salud',         value:B.info.hospitales },
+  { icon:'🌳', label:'Parques',       value:B.info.parques },
+  { icon:'🏠', label:'Estratos',      value:B.info.estratos },
+];
+document.getElementById('info-grid').innerHTML = infoItems.map(i=>`
+  <div class="info-item">
+    <div class="ii-icon">${i.icon}</div>
+    <div class="ii-label">${i.label}</div>
+    <div class="ii-value">${i.value}</div>
+  </div>
+`).join('');
+
+// ─── PRICES ──────────────────────────────────────────────────────────────────
+document.getElementById('price-grid').innerHTML = `
+  <div class="price-card">
+    <div class="pc-type">Arriendo mensual</div>
+    <div class="pc-range">$${B.precioArriendoMin}k – $${B.precioArriendoMax}k</div>
+    <div class="pc-unit">COP · por mes</div>
+    <span class="pc-trend ${B.tendenciaArriendo==='up'?'trend-up':'trend-down'}">
+      ${B.tendenciaArriendo==='up'?'↑ En alza':'↓ A la baja'}
+    </span>
+  </div>
+  <div class="price-card">
+    <div class="pc-type">Precio de venta</div>
+    <div class="pc-range">$${(B.precioVentaMin/1000).toFixed(0)}M – $${(B.precioVentaMax/1000000).toFixed(1)}B</div>
+    <div class="pc-unit">COP · aprox. por apto 60m²</div>
+    <span class="pc-trend ${B.tendenciaVenta==='up'?'trend-up':'trend-down'}">
+      ${B.tendenciaVenta==='up'?'↑ En alza':'↓ A la baja'}
+    </span>
+  </div>
+`;
+
+// ─── NEARBY ──────────────────────────────────────────────────────────────────
+document.getElementById('nearby-list').innerHTML = B.nearby.map(n=>`
+  <div class="nearby-item">
+    <div class="ni-left">
+      <span class="ni-icon">${n.icon}</span>
+      <div>
+        <div class="ni-name">${n.name}</div>
+        <div class="ni-type">${n.type}</div>
+      </div>
+    </div>
+    <span class="ni-dist">${n.dist}</span>
+  </div>
+`).join('');
+</script>
+</body>
+</html>
