@@ -1048,7 +1048,7 @@ function renderCards() {
       <div class="card-name">${b.name}</div>
       <div class="card-ratings">
         <div class="rating-pill">
-          <span class="label">Alcaldía</span>
+          <span class="label">BarrioVoz</span>
           <span class="score ${scoreClass(b.adminScore)}">★ ${b.adminScore.toFixed(1)}</span>
         </div>
         <div class="rating-pill">
@@ -1069,7 +1069,7 @@ function renderCards() {
         <div style="font-size:0.8rem;color:var(--accent)">
           💰 $${b.precioMin}k – $${b.precioMax}k
         </div>
-        <a href="#" style="color:var(--accent);font-size:0.82rem;text-decoration:none">Ver más →</a>
+        <a href="barrio.html?nombre=${encodeURIComponent(b.name)}" style="color:var(--accent);font-size:0.82rem;text-decoration:none">Ver más →</a>
       </div>
     </div>
   `).join('');
